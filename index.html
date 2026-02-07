@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlayTopia Leaderboard | BitByBit Club</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #5b7cfa;
+            --secondary: #1f2a44;
+            --accent: #ff4d6d;
+            --bg: #f4f6fb;
+            --card: #ffffff;
+            --text: #1e293b;
+            --muted: #64748b;
+            --gold: #facc15;
+            --silver: #cbd5e1;
+            --bronze: #f59e0b;
+            --shadow: 0 15px 35px rgba(0,0,0,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Segoe UI", system-ui, sans-serif;
+            background: linear-gradient(135deg, #eef2ff, #f8fafc);
+            min-height: 100vh;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 0.35rem 1rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .title {
+            font-size: 2.6rem;
+            font-weight: 800;
+            color: var(--secondary);
+        }
+
+        .subtitle {
+            margin-top: 0.4rem;
+            color: var(--muted);
+            font-size: 1.05rem;
+        }
+
+        /* Card */
+        .card {
+            background: var(--card);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Loading */
+        .loading {
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.3s;
+        }
+
+        .card.loading-active .loading {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .spinner {
+            width: 42px;
+            height: 42px;
+            border: 4px solid #e0e7ff;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: linear-gradient(135deg, var(--primary), #7c92ff);
+            color: white;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+        }
+
+        th:last-child, td:last-child {
+            text-align: center;
+        }
+
+        tbody tr {
+            transition: 0.25s;
+        }
+
+        tbody tr:hover {
+            background: #f1f5ff;
+        }
+
+        td {
+            border-bottom: 1px solid #eef2f7;
+            font-weight: 500;
+        }
+
+        /* Rank */
+        .rank-box {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 700;
+        }
+
+        .medal {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .gold { background: linear-gradient(135deg, #facc15, #eab308); }
+        .silver { background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
+        .bronze { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+        /* Referral */
+        .referral {
+            font-size: 1.05rem;
+        }
+
+        /* Points */
+        .points {
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        /* Footer */
+        .footer {
+            padding: 0.9rem;
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--muted);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .footer i {
+            animation: spin 3s linear infinite;
+        }
+
+        @media (max-width: 600px) {
+            .title { font-size: 2rem; }
+            th, td { padding: 0.75rem; }
+        }
+    </style>
+
+    <script>
+        async function fetchLeaderboard() {
+            const card = document.querySelector('.card');
+            card.classList.add('loading-active');
+
+            const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTim0XldQH29r7GaVPZNS5AD_AxhLq05e6VnO0ZcjdWsDefxCQEoIsImlcHxllAGQX09ea7HD2x4Awl/pub?gid=793777982&output=tsv";
+
+            try {
+                const res = await fetch(sheetURL);
+                const text = await res.text();
+
+                const rows = text.trim().split("\n").map(r => r.split("\t"));
+                const data = rows.slice(1)
+                    .map(r => ({ name: r[0], points: parseInt(r[1]) || 0 }))
+                    .filter(r => r.name && r.points > 0)
+                    .sort((a, b) => b.points - a.points);
+
+                const tbody = document.getElementById("leaderboard");
+                tbody.innerHTML = data.map((e, i) => {
+                    const rank = i + 1;
+                    let medal = "";
+
+                    if (rank === 1) medal = `<div class="medal gold">1</div>`;
+                    else if (rank === 2) medal = `<div class="medal silver">2</div>`;
+                    else if (rank === 3) medal = `<div class="medal bronze">3</div>`;
+                    else medal = `<strong>${rank}</strong>`;
+
+                    return `
+                        <tr>
+                            <td>
+                                <div class="rank-box">${medal}</div>
+                            </td>
+                            <td class="referral">${e.name}</td>
+                            <td class="points">${e.points}</td>
+                        </tr>
+                    `;
+                }).join("");
+
+                document.getElementById("time").textContent =
+                    new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            } catch (err) {
+                console.error(err);
+            } finally {
+                card.classList.remove('loading-active');
+            }
+        }
+
+        window.onload = fetchLeaderboard;
+        setInterval(fetchLeaderboard, 3600000);
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="badge">Advitya 26</div>
+            <h1 class="title">PlayTopia Referral Leaderboard</h1>
+            <p class="subtitle">Organized by <strong>BitByBit Club</strong></p>
+        </div>
+
+        <div class="card">
+            <div class="loading">
+                <div class="spinner"></div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th width="15%">Rank</th>
+                        <th width="55%">Referral Code</th>
+                        <th width="30%">Registrations</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard"></tbody>
+            </table>
+
+            <div class="footer">
+                <i class="fas fa-sync-alt"></i>
+                <span>Last updated at <span id="time">--:--</span> • Auto refresh every hour</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
